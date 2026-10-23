@@ -1,0 +1,44 @@
+# --- Documentation and notes ---
+*.md
+*.txt
+*.rst
+
+# --- Shell scripts ---
+*.sh
+deploy/
+scripts/
+
+# --- Environment and config files ---
+*.env
+*.env.*
+config.yaml
+config.json
+
+# --- Development artifacts ---
+*.pyc
+__pycache__/
+*.pyo
+.env.local
+
+# --- IDE and editor files ---
+.vscode/
+.idea/
+*.code-workspace
+
+# --- Git ---
+.git/
+.gitignore
+
+# --- Docker/Build artifacts ---
+.dockerinit
+.targets
+
+# --- Package manages ---
+node_modules/
+venv/
+__pycache__/
+.env*
+
+# --- Seed data output files ---
+seed-data/posta
+seed-data/postb
