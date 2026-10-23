@@ -6,6 +6,10 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/*
 
+# Create a non-root user for security
+# -g: group, -r: system user, -m: create home, -s: shell
+RUN groupadd -r appuser && useradd -r -g appuser -m -s /sbin/nologin appuser
+
 # Set the application directory
 WORKDIR /usr/local/app
 
@@ -27,6 +31,10 @@ COPY . .
 
 # Make port 80 available for links and/or publish
 EXPOSE 80
+
+# Switch to non-root user
+# This limits damage if there's a security vulnerability
+USER appuser
 
 # Define our command to be run when launching the container
 CMD ["gunicorn", "app:app", "-b", "0.0.0.0:80", "--log-file", "-", "--access-logfile", "-", "--workers", "4", "--keep-alive", "0"]
