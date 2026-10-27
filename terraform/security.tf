@@ -4,31 +4,12 @@ resource "aws_security_group" "nodes" {
   description = "Allow traffic to Kubernetes worker nodes"
   vpc_id = aws_vpc.main.id
 
-  # Allowing SSH
   ingress {
-    description = "SSH from anywhere"
-    from_port = 22
-    to_port = 22
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # Allow Http
-  ingress {
-    description = "Allow Http from anywhere"
-    from_port = 80
-    to_port = 80
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # Allow HTTPS
-  ingress {
-    description = "Allow HTTPS from anywhere"
-    from_port = 443
-    to_port = 443
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description = "NodePort range from within VPC"
+    from_port   = 30000
+    to_port     = 32767
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.main.cidr_block]
   }
 
   # Outgoing traffic

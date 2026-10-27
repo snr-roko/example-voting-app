@@ -24,6 +24,7 @@ resource "aws_subnet" "public" {
 
   tags = {
     "Name" = "example-voting-app-public-subnet-${count.index}"
+    "kubernetes.io/role/elb" = "1"
   }
 }
 

@@ -14,6 +14,12 @@ resource "aws_iam_role" "eks_cluster" {
   })
 }
 
+# Attaching Policies to the EKS Cluster Role
+resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
+  role       = aws_iam_role.eks_cluster.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+}
+
 # Role for EKS Worker Nodes
 resource "aws_iam_role" "eks_node" {
   name = "example-voting-app-eks-node-role"
@@ -23,7 +29,7 @@ resource "aws_iam_role" "eks_node" {
     Statement = [{
       Effect = "Allow"
       Principal = {
-        Service = "eks.amazonaws.com"
+        Service = "ec2.amazonaws.com"
       }
       Action = "sts:AssumeRole"
     }]
@@ -46,6 +52,11 @@ resource "aws_iam_role_policy_attachment" "eks_ssm" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
+resource "aws_iam_role_policy_attachment" "eks_ecr" {
+  role       = aws_iam_role.eks_node.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
 # EKS Cluster
 resource "aws_eks_cluster" "main" {
   name     = "example-voting-app"
@@ -54,6 +65,8 @@ resource "aws_eks_cluster" "main" {
   vpc_config {
     subnet_ids = aws_subnet.public[*].id
   }
+
+  depends_on = [aws_iam_role_policy_attachment.eks_cluster_policy]
 
   enabled_cluster_log_types = [
     "api",
@@ -66,6 +79,16 @@ resource "aws_eks_cluster" "main" {
   tags = {
     Name = "example-voting-app-eks"
   }
+}
+
+# Launch template for attaching security groups
+resource "aws_launch_template" "nodes" {
+  name_prefix = "example-voting-app-nodes-"
+
+  vpc_security_group_ids = [
+    aws_security_group.nodes.id,
+    aws_eks_cluster.main.vpc_config[0].cluster_security_group_id,
+  ]
 }
 
 # EKS Node Group
@@ -82,7 +105,21 @@ resource "aws_eks_node_group" "default" {
 
   node_role_arn = aws_iam_role.eks_node.arn
 
-  ami_type = "AL2_x86_64"
+  ami_type = "AL2023_x86_64_STANDARD"
+
+  instance_types = ["t3.medium"]
+
+  launch_template {
+    id      = aws_launch_template.nodes.id
+    version = aws_launch_template.nodes.latest_version
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_worker,
+    aws_iam_role_policy_attachment.eks_cni,
+    aws_iam_role_policy_attachment.eks_ssm,
+    aws_iam_role_policy_attachment.eks_ecr
+  ]
 
   labels = {
     "app" = "example-voting-app"
