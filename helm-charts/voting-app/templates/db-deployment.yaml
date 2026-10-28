@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+  labels:
+    {{- include "voting-app.labels" . | nindent 4 }}
+    app: db
+spec:
+  replicas: {{ .Values.db.replicas }}
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.db.image }}
+          ports:
+            - containerPort: {{ .Values.db.port }}
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.db.user }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.db.password }}
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "{{ .Values.db.user }}"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: db-data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: db-data
+          emptyDir: {}

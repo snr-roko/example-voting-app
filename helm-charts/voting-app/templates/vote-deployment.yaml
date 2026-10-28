@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vote
+  labels:
+    {{- include "voting-app.labels" . | nindent 4 }}
+    app: vote
+spec:
+  replicas: {{ .Values.vote.replicas }}
+  selector:
+    matchLabels:
+      app: vote
+  template:
+    metadata:
+      labels:
+        app: vote
+    spec:
+      containers:
+        - name: vote
+          image: "{{ .Values.registry }}/example-voting-app-vote:{{ .Values.imageTag }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.vote.port }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.vote.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
