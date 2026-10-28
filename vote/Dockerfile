@@ -33,6 +33,9 @@ COPY . .
 # Make port 80 available for links and/or publish
 EXPOSE 80
 
+# Remove setuptools and wheel since gunicorn does not need it and to avoid trivy scanning it
+RUN python -m pip uninstall -y pip setuptools wheel
+
 # Switch to non-root user
 # This limits damage if there's a security vulnerability
 USER appuser
