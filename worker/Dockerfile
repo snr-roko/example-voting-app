@@ -1,5 +1,5 @@
 # --- build stage: compile the application ---
-FROM --platform=${BUILDPLATFORM} mcr.microsoft.com/dotnet/sdk:7.0 AS build
+FROM --platform=${BUILDPLATFORM} mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
 ARG TARGETPLATFORM
 ARG TARGETARCH
@@ -16,7 +16,7 @@ COPY . .
 RUN dotnet publish -c release -o /app -a $TARGETARCH --self-contained false --no-restore
 
 # --- final stage: runtime ---
-FROM mcr.microsoft.com/dotnet/runtime:7.0 AS final
+FROM mcr.microsoft.com/dotnet/runtime:10.0 AS final
 
 WORKDIR /app
 
