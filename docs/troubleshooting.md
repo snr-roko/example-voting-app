@@ -1,6 +1,6 @@
 # Troubleshooting log
 
-Not a polished guide. This is the order things actually broke and what the fix turned out to be, because the second one took most of a day.
+The order things broke in, and what fixed them. The second one took most of a day.
 
 ## 1. Node group failed with `NodeCreationFailure`
 
@@ -29,7 +29,7 @@ I assumed it was networking, so I checked the outside-in path before touching an
 
 Everything matched. The role in the token was the role in the ConfigMap.
 
-### The line that actually said something
+### The line that mattered
 
 ```
 E kubelet_node_status.go:108] "Unable to register node with API server" err="Unauthorized"
@@ -38,7 +38,7 @@ E controller.go:208] "Failed to ensure lease exists, will retry" err="Unauthoriz
 
 Not a timeout, not a TLS error, not `Forbidden`. The kubelet was reaching the API server and being told it did not know who it was.
 
-That distinction is the useful part. `401` means authentication failed. `403` would have meant the identity was known but not permitted. With the token, the clock, the instance profile and the ConfigMap all verified, the only remaining suspect was the component that does the authenticating: the control plane.
+`401` means authentication failed. `403` would have meant the identity was known but not permitted. With the token, the clock, the instance profile and the ConfigMap all verified, the only remaining suspect was the component doing the authenticating: the control plane.
 
 ### Root cause
 
@@ -46,8 +46,8 @@ The cluster IAM role had no policies attached at all.
 
 There are two roles in an EKS cluster and I had treated them as one thing:
 
-- `eks_node` — trusted by `ec2.amazonaws.com`. The kubelet uses it. Had four policies.
-- `eks_cluster` — trusted by `eks.amazonaws.com`. The control plane uses it to act in my account. Had nothing.
+- `eks_node`: trusted by `ec2.amazonaws.com`. The kubelet uses it. Had four policies.
+- `eks_cluster`: trusted by `eks.amazonaws.com`. The control plane uses it to act in my account. Had nothing.
 
 An `aws_eks_cluster` can still reach `ACTIVE` with a permission-less role, because the control plane itself is AWS-managed infrastructure. `ACTIVE` means the API server is up, not that the cluster works. Everything that needs the control plane to act on my behalf fails later and quietly, which is why the symptom appeared 5 minutes into node bootstrap instead of at apply time.
 
@@ -61,13 +61,13 @@ The moment you pass your own security groups, EKS stops attaching the cluster on
 
 ### Why the node group had to be replaced
 
-`NodeCreationFailure` is terminal. EKS stops retrying and considers the group dead, so the existing instances would never re-register even with IAM fixed. Node groups also cannot gain a launch template after creation. `terraform apply -replace="aws_eks_node_group.default"` was the only honest option.
+`NodeCreationFailure` is terminal. EKS stops retrying and considers the group dead, so the existing instances would never re-register even with IAM fixed. Node groups also cannot gain a launch template after creation. `terraform apply -replace="aws_eks_node_group.default"` was the only option.
 
-Honest caveat: because the policy and the replacement went in the same apply, I cannot prove which single change flipped it. Both were necessary and the group could not be retested without the replacement.
+Because the policy and the replacement went in the same apply, I cannot prove which change fixed it. Both were necessary, and the group could not be retested without the replacement.
 
 ## 2. Trivy failed every build
 
-The scan gate is `CRITICAL,HIGH`, `exit-code 1`, `ignore-unfixed true`. It rejected all three services, each for a different reason. This turned out to be the most useful part of the project.
+The scan gate is `CRITICAL,HIGH`, `exit-code 1`, `ignore-unfixed true`. It rejected all three services, each for a different reason.
 
 ### vote — findings in packages the app never uses
 
@@ -136,13 +136,13 @@ After regenerating, `socket.io-parser 4.2.4` and `ws 8.11.0` were still flagged.
 
 Both are patch-level, and `npm ci` respects overrides, so local and CI resolve identically.
 
-### What I took from it
+### Lesson
 
-Trivy reports artifacts, not reachability. A vulnerable `urllib3` inside pip is not a vulnerable application, but it is still a vulnerable artifact, and removing it is cheaper than arguing about it. The scan turned three "working" images into three images I could actually describe.
+Trivy reports artifacts, not reachability. A vulnerable `urllib3` inside pip is not a vulnerable application, but it is still in the image, and removing it costs less than arguing about whether it is reachable.
 
 ## 3. Smaller ones, in order
 
-**`Cache export is not supported for the docker driver`.** The GitHub runner's default BuildKit driver cannot export cache to `type=gha`. Adding `docker/setup-buildx-action` switches to the `docker-container` driver, which can. The tempting fix — deleting `cache-to` — makes the error disappear and reinstalls pandas and pip on every run.
+**`Cache export is not supported for the docker driver`.** The GitHub runner's default BuildKit driver cannot export cache to `type=gha`. Adding `docker/setup-buildx-action` switches to the `docker-container` driver, which can. Deleting `cache-to` also makes the error disappear, and reinstalls every dependency on every run.
 
 **`logging { }` block rejected.** The AWS provider has no `logging` block on `aws_eks_cluster`. It is `enabled_cluster_log_types`.
 

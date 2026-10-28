@@ -45,7 +45,7 @@ flowchart LR
 
 The data flow in one line: `vote` pushes a JSON vote onto a Redis list, `worker` pops it and writes a row into Postgres, `result` polls Postgres once per second and pushes the totals to the browser over socket.io.
 
-Both web services are `NodePort` (`31000`, `31001`). There is no load balancer yet, and the node security group only allows `30000-32767` from inside the VPC, so from outside I reach them with `kubectl port-forward`. I did that on purpose: an ALB without an Ingress controller and TLS is a security group with extra steps. See [Known gaps](#known-gaps).
+Both web services are `NodePort` (`31000`, `31001`). There is no load balancer, and the node security group only allows `30000-32767` from inside the VPC, so from outside I reach them with `kubectl port-forward`. An ALB without an Ingress controller and TLS would be a security group with extra steps. See [Known gaps](#known-gaps).
 
 ## Infrastructure
 
@@ -92,7 +92,7 @@ aws eks update-kubeconfig --name example-voting-app --region us-east-1
 kubectl get nodes
 ```
 
-Images come from GHCR and are tagged by commit SHA, never `latest`. Take the SHA from the last green run of each workflow and deploy:
+Images come from GHCR and are tagged by commit SHA, never `latest`. Deploy the SHA that all three workflows built from the same commit:
 
 ```shell
 helm install voting-app helm-charts/voting-app \
@@ -112,7 +112,8 @@ Tear it down when you're not using it. The control plane alone is about $0.10/ho
 
 ```shell
 helm uninstall voting-app
-cd terraform && terraform destroy
+cd terraform
+terraform destroy
 ```
 
 ## Pipeline
@@ -145,7 +146,7 @@ helm rollback  voting-app <revision>
 
 Every install, upgrade and rollback creates a numbered revision. Helm stores the rendered manifests for each revision as a Secret in the namespace, so a rollback reapplies the exact YAML from that point in time. It does not need the old values file or the old git commit.
 
-`--wait --atomic` is not optional. Without them Helm reports `STATUS: deployed` as soon as the API server accepts the objects, which means a release whose pods are in `ImagePullBackOff` counts as a success.
+`--wait --atomic` is not optional. Without them Helm reports `STATUS: deployed` as soon as the API server accepts the objects, which means a release whose pods are in `ImagePullBackOff` counts as a success. Helm 4 deprecated `--atomic` in favour of `--rollback-on-failure`; the commands above still work on both.
 
 The rollback drill and its output are in [docs/evidence.md](docs/evidence.md).
 
@@ -166,8 +167,8 @@ The rollback drill and its output are in [docs/evidence.md](docs/evidence.md).
 - `POSTGRES_PASSWORD` is a plain value in the chart. It should be an External Secret or a Sealed Secret.
 - No HPA, no requests/limits on most containers, so scheduling is best-effort.
 - Terraform state is local, which makes the project single-user.
-- The pipeline builds and scans, but deployment is a manual `helm upgrade`. Automating it needs an OIDC role for GitHub Actions rather than long-lived AWS keys, which I did not have time to do properly.
+- The pipeline builds and scans; deployment is still a manual `helm upgrade`. Closing that gap needs an OIDC-trust role for GitHub Actions and a deploy job, instead of long-lived AWS keys in repository secrets.
 
 ## Troubleshooting
 
-Everything that went wrong, and why: [docs/troubleshooting.md](docs/troubleshooting.md).
+What broke, and what fixed it: [docs/troubleshooting.md](docs/troubleshooting.md).
