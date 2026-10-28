@@ -15,7 +15,21 @@ The application code is not mine. Everything around it is: the AWS network, the 
 | `helm-charts/voting-app/` | The chart that deploys all five components |
 | `.github/workflows/` | Three pipelines: `vote-ci`, `result-ci`, `worker-ci` |
 | `k8s-specifications/` | Plain manifests from upstream. Kept for reference, superseded by the chart |
-| `docs/` | Architecture notes, troubleshooting log, evidence for the rollback drill |
+| `docs/` | Troubleshooting log, rollback evidence, screenshots |
+
+## Capstone requirements
+
+| Requirement | Where it is |
+|---|---|
+| Forked repo with a clear README | This file |
+| Terraform code for the cluster | `terraform/`, applied twice from scratch |
+| One Helm chart | `helm-charts/voting-app/` |
+| Working pipeline that builds and scans | `.github/workflows/`, Trivy as a gate |
+| Architecture diagram | The Mermaid diagram below |
+| Environment rebuilds from code | `docs/evidence.md` section 1 |
+| No secrets in Git | `docs/evidence.md` section 5 |
+| Rollback shown live | `docs/evidence.md` section 4 |
+| One push builds, scans **and deploys** | Not met. The build and scan are automated; deployment is a manual `helm upgrade`. See [Known gaps](#known-gaps) |
 
 ## Architecture
 
