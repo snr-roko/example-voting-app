@@ -1,4 +1,4 @@
-FROM node:18-slim
+FROM node:24-slim
 
 # add curl for healthcheck
 RUN apt-get update && \
@@ -10,14 +10,12 @@ RUN groupadd -r appuser && useradd -r -g appuser -m -s /sbin/nologin appuser
 
 WORKDIR /usr/local/app
 
-# have nodemon available for local dev use (file watching)
-RUN npm install -g nodemon
-
 COPY package*.json ./
 
 RUN npm ci && \
  npm cache clean --force && \
- mv /usr/local/app/node_modules /node_modules
+ mv /usr/local/app/node_modules /node_modules && \
+ rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
 COPY . .
 
