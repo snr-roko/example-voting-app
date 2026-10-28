@@ -224,14 +224,34 @@ The first command returns nothing, so no state file, variable file or key materi
 
 ## 6. Teardown
 
-Run once both capstones are done and the cluster is no longer needed.
-
 ```shell
+kubectl delete namespace robot-shop
 helm uninstall voting-app
 cd terraform
 terraform destroy
 ```
 
+The first run lost network connectivity partway through — a local DNS failure, not an AWS error:
+
 ```
-output goes here
+aws_eks_node_group.default: Destruction complete after 23m50s
+aws_eks_cluster.main: Destruction complete after 2m7s
+aws_subnet.public[1]: Destruction complete after 3s
+aws_subnet.public[0]: Destruction complete after 3s
+╷
+│ Error: deleting EC2 Internet Gateway (igw-06ddd3eceee767d2d): detaching EC2 Internet Gateway from VPC (vpc-058a08de831f7b32a): operation error EC2: DetachInternetGateway, https response error StatusCode: 0, RequestID: , request send failed, Post: dial tcp: lookup ec2.us-east-1.amazonaws.com: no such host
+╵
 ```
+
+Sixteen of the eighteen resources were already gone. Because Terraform tracks what it has destroyed in the state file, re-running the same command picked up only what was left:
+
+```
+Plan: 0 to add, 0 to change, 2 to destroy.
+
+aws_internet_gateway.main: Destruction complete after 2s
+aws_vpc.main: Destruction complete after 1s
+
+Destroy complete! Resources: 2 destroyed.
+```
+
+18 resources created, 16 destroyed, 2 destroyed on the retry, nothing left billable. The node group is the slow part of a destroy as well: 23m50s, because EKS drains and removes the instances before releasing the group.
