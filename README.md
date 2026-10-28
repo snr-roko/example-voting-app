@@ -1,6 +1,6 @@
 # Voting App on Amazon EKS
 
-This is my fork of [dockersamples/example-voting-app](https://github.com/dockersamples/example-voting-app), turned into the Capstone 1 project.
+This is my fork of [dockersamples/example-voting-app](https://github.com/dockersamples/example-voting-app), turned into the Capstone 1 project of TS Academy Devops Engineering Program.
 
 The application code is not mine. Everything around it is: the AWS network, the cluster and node group, the IAM roles, the container hardening, the build pipeline, and the Helm chart that releases the app.
 
@@ -167,7 +167,7 @@ The rollback drill and its output are in [docs/evidence.md](docs/evidence.md).
 - `POSTGRES_PASSWORD` is a plain value in the chart. It should be an External Secret or a Sealed Secret.
 - No HPA, no requests/limits on most containers, so scheduling is best-effort.
 - Terraform state is local, which makes the project single-user.
-- The pipeline builds and scans; deployment is still a manual `helm upgrade`. Closing that gap needs an OIDC-trust role for GitHub Actions and a deploy job, instead of long-lived AWS keys in repository secrets.
+- The pipeline builds and scans; deployment is still a manual `helm upgrade`. Closing that would need a deploy job and secrets management of AWS secrets which will be done in the future.
 
 ## Troubleshooting
 
