@@ -1,0 +1,66 @@
+name: result-ci
+
+on:
+    push:
+        branches: [ main ]
+        paths:
+            - "result/**"
+            - ".github/workflows/result-ci.yaml"
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    packages: write
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+              working-directory: result
+        steps:
+            - uses: actions/checkout@v4
+            
+            - uses: actions/setup-node@v4
+              with:
+                node-version: "18"
+                cache: npm
+                cache-dependency-path: result/package-lock.json
+            
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Syntax check
+              run: node --check server.js
+
+    build:
+        needs: test
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: docker/setup-buildx-action@v3
+
+            - uses: docker/login-action@v3
+              with:
+                registry: ghcr.io
+                username: ${{ github.actor }}
+                password: ${{ secrets.GITHUB_TOKEN }}
+
+            - uses: docker/build-push-action@v6
+              with:
+                context: result
+                push: true
+                tags: ghcr.io/${{ github.repository_owner }}/example-voting-app-result:${{ github.sha }}
+                cache-from: type=gha
+                cache-to: type=gha,mode=max
+    scan:
+        needs: build
+        runs-on: ubuntu-latest
+        steps:
+            - uses: aquasecurity/trivy-action@v0.36.0
+              with: 
+                image-ref: ghcr.io/${{ github.repository_owner }}/example-voting-app-result:${{ github.sha }}
+                severity: CRITICAL,HIGH
+                exit-code: "1"
+                ignore-unfixed: true
