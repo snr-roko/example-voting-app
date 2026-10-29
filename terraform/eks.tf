@@ -57,6 +57,11 @@ resource "aws_iam_role_policy_attachment" "eks_ecr" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
+resource "aws_iam_role_policy_attachment" "eks_ebs_csi" {
+  role       = aws_iam_role.eks_node.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+}
+
 # EKS Cluster
 resource "aws_eks_cluster" "main" {
   name     = "example-voting-app"
@@ -100,7 +105,7 @@ resource "aws_eks_node_group" "default" {
   scaling_config {
     min_size  = 1
     max_size  = 3
-    desired_size = 2
+    desired_size = 3
   }
 
   node_role_arn = aws_iam_role.eks_node.arn
@@ -128,4 +133,18 @@ resource "aws_eks_node_group" "default" {
   tags = {
     "Name" = "example-voting-app-node-group"
   }
+}
+
+# EBS CSI driver, so PersistentVolumeClaims can actually bind
+resource "aws_eks_addon" "ebs_csi" {
+  cluster_name  = aws_eks_cluster.main.name
+  addon_name    = "aws-ebs-csi-driver"
+
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+
+  depends_on = [
+    aws_eks_node_group.default,
+    aws_iam_role_policy_attachment.eks_ebs_csi
+  ]
 }
