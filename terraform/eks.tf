@@ -94,6 +94,12 @@ resource "aws_launch_template" "nodes" {
     aws_security_group.nodes.id,
     aws_eks_cluster.main.vpc_config[0].cluster_security_group_id,
   ]
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
 }
 
 # EKS Node Group
